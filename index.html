@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="fr" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Gymnastique à l'École 🤸‍♀️</title>
+    
+    <link rel="manifest" href="manifest.json">
+    
+    <script src="libs/tailwindcss.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    screens: { 'xs': '475px' },
+                    animation: { 'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
+                }
+            }
+        }
+    </script>
+    <script src="libs/vue.global.js"></script>
+    
+    <script src="libs/confetti.browser.min.js"></script>
+
+    <link href="libs/fontawesome/css/all.min.css" rel="stylesheet">
+    <script src="gym_data.js"></script>
+
+    <style>
+        /* Optimisations CSS */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .touch-manipulation { touch-action: manipulation; }
+        
+        /* Couleurs Agrès - Contrastes améliorés (RGAA) */
+        .bg-SOL { background-color: #dc2626; } .bg-POUTRE { background-color: #059669; } .bg-BARRES { background-color: #2563eb; } 
+        .border-SOL { border-color: #dc2626; } .border-POUTRE { border-color: #059669; } .border-BARRES { border-color: #2563eb; }
+        .text-SOL { color: #dc2626; } .text-POUTRE { color: #059669; } .text-BARRES { color: #2563eb; }
+
+        /* Transitions Vue */
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(5px); }
+        
+        /* Micro-interactions */
+        .btn-press:active { transform: scale(0.95); }
+        .hover-lift:hover { transform: translateY(-2px); }
+
+        /* Badges Difficulté */
+        .diff-1 { background-color: #ecfccb; color: #365314; border: 1px solid #bef264; }
+        .diff-2 { background-color: #fef9c3; color: #713f12; border: 1px solid #fde047; }
+        .diff-3 { background-color: #ffedd5; color: #7c2d12; border: 1px solid #fdba74; }
+        .diff-4 { background-color: #fee2e2; color: #7f1d1d; border: 1px solid #fca5a5; }
+        
+        .dark .diff-1 { background-color: rgba(132, 204, 22, 0.2); color: #bef264; border-color: rgba(132, 204, 22, 0.5); }
+        .dark .diff-2 { background-color: rgba(234, 179, 8, 0.2); color: #fde047; border-color: rgba(234, 179, 8, 0.5); }
+        .dark .diff-3 { background-color: rgba(249, 115, 22, 0.2); color: #fdba74; border-color: rgba(249, 115, 22, 0.5); }
+        .dark .diff-4 { background-color: rgba(239, 68, 68, 0.2); color: #fca5a5; border-color: rgba(239, 68, 68, 0.5); }
+
+        /* Styles spécifiques App Mobile & Impression corrigés */
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        @media print {
+            .no-print { display: none !important; }
+            aside, nav, header, footer { display: none !important; }
+            
+            html, body, #app, main {
+                height: auto !important;
+                overflow: visible !important;
+                background-color: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            .grid-cols-1.md\:grid-cols-2.lg\:grid-cols-3 {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 12px !important;
+            }
+
+            .print-break-inside-avoid { 
+                page-break-inside: avoid; 
+                break-inside: avoid; 
+                border: 1px solid #cbd5e1 !important;
+            }
+            .h-full { height: auto !important; }
+
+            .aspect-video {
+                height: 110px !important;
+                aspect-ratio: auto !important;
+            }
+
+            .p-4 { padding: 0.5rem !important; }
+            
+            .bg-white.dark\:bg-slate-800.p-6.rounded-\[2\.5rem\] {
+                padding: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                margin-bottom: 10px !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 h-screen overflow-hidden font-sans transition-colors duration-300 dark:bg-slate-900 dark:text-slate-100">
+
+<div id="app" class="flex h-full">
+
+    <aside :class="['bg-slate-900 text-white h-full z-40 transition-all flex flex-col shadow-xl absolute lg:relative border-r border-slate-800 no-print', isSidebarOpen ? 'w-80' : 'w-0 overflow-hidden lg:w-0']" aria-label="Menu principal">
+        <div class="p-6 border-b border-slate-800 flex justify-between items-center shrink-0">
+            <h1 class="font-black italic text-xl uppercase tracking-tighter text-blue-400">Gym à l'école 🤸‍♀️</h1>
+            <button @click="isSidebarOpen = false" aria-label="Fermer le menu" class="text-slate-500 hover:text-white transition btn-press"><i class="fas fa-times text-xl" aria-hidden="true"></i></button>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-4 space-y-6">
+            
+            <button @click="openModeEnfant" class="w-full text-center p-4 bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-300 hover:to-orange-300 rounded-xl shadow-lg border-2 border-yellow-200 text-white font-black text-sm uppercase transition transform active:scale-95 mb-4">
+                🧸 Parcours Enfant
+            </button>
+
+            <button @click="view = 'circuit'; if(window.innerWidth < 1024) isSidebarOpen = false;" class="w-full text-left p-3 bg-orange-600/20 hover:bg-orange-600/40 rounded-xl flex items-center justify-between text-orange-400 font-black text-xs uppercase transition border border-orange-900/50 hover:border-orange-500/50">
+                <span class="flex items-center gap-3"><i class="fas fa-route" aria-hidden="true"></i> Mon Circuit</span>
+                <span class="bg-orange-500 text-white px-2 py-0.5 rounded-full text-[10px]">{{ circuit.length }}</span>
+            </button>
+
+            <button @click="openWarmupList" class="w-full text-left p-3 bg-amber-600/20 hover:bg-amber-600/40 rounded-xl flex items-center gap-3 text-amber-400 font-black text-xs uppercase transition border border-amber-900/50 hover:border-amber-500/50">
+                <i class="fas fa-fire" aria-hidden="true"></i> Échauffements
+            </button>
+            <button @click="openPedagogyMenu" class="w-full text-left p-3 bg-indigo-600/20 hover:bg-indigo-600/40 rounded-xl flex items-center gap-3 text-indigo-400 font-black text-xs uppercase transition border border-indigo-900/50 hover:border-indigo-500/50">
+                <i class="fas fa-layer-group" aria-hidden="true"></i> Progressions Pédago.
+            </button>
+
+            <div v-for="agre in ['SOL', 'POUTRE', 'BARRES']" :key="agre">
+                <div class="flex items-center gap-2 mb-2 text-slate-500 font-black text-[10px] tracking-widest uppercase" aria-hidden="true">
+                    <div :class="['w-2 h-2 rounded-full', 'bg-'+agre]"></div> {{ agre }}
+                </div>
+                <div v-for="action in getActions(agre)" :key="action">
+                    <button @click="toggleFolder(agre+action)" :aria-expanded="openFolders.includes(agre+action).toString()" class="w-full text-left p-2 hover:bg-slate-800 rounded-lg flex justify-between items-center text-xs font-bold transition text-slate-300">
+                        {{ action }} <i :class="['fas fa-chevron-right text-[10px] transition', openFolders.includes(agre+action) ? 'rotate-90 text-blue-400' : '']" aria-hidden="true"></i>
+                    </button>
+                    <div v-show="openFolders.includes(agre+action)" class="ml-4 border-l border-slate-700 pl-2 my-1 space-y-1">
+                        <button v-for="el in getElements(agre, action)" @click="selectElement(el)" :class="['block w-full text-left p-2 text-xs transition rounded', curr?.id === el.id ? 'text-blue-400 font-black bg-slate-800' : 'text-slate-400 hover:text-white hover:bg-slate-800/50']">
+                            {{ el.nom }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden relative bg-slate-50 dark:bg-slate-900 transition-colors duration-300" 
+          @touchstart="handleTouchStart" @touchend="handleTouchEnd">
+        
+        <header v-if="!view.startsWith('enfant_')" class="bg-white dark:bg-slate-800 border-b dark:border-slate-700 p-3 flex flex-col gap-2 shadow-sm shrink-0 z-20 relative transition-colors duration-300 no-print">
+            <div class="flex items-center justify-between px-2 lg:px-6 gap-4">
+                <div class="flex items-center gap-3 overflow-hidden flex-1">
+                    <button @click="isSidebarOpen = true" v-show="!isSidebarOpen" aria-label="Ouvrir le menu" class="text-blue-600 dark:text-blue-400 p-2 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-full transition shrink-0">
+                        <i class="fas fa-bars text-lg" aria-hidden="true"></i>
+                    </button>
+                    
+                    <button v-if="view !== 'home'" @click="handleBack" aria-label="Retour à la page précédente" class="btn-press bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 px-3 py-2 rounded-full border border-slate-300 dark:border-slate-600 shadow-sm flex items-center gap-2 transition shrink-0">
+                        <i class="fas fa-arrow-left text-sm" aria-hidden="true"></i> 
+                        <span class="text-xs font-black uppercase hidden sm:inline">Retour</span>
+                    </button>
+
+                    <div v-if="view === 'element'" class="flex items-center shrink-0 shadow-sm rounded-full">
+                        <button @click="goToPrevElement" :disabled="!hasPrevElement" aria-label="Élément précédent" :class="['btn-press px-3 py-2 rounded-l-full border transition flex items-center justify-center', hasPrevElement ? 'bg-white dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 text-blue-600 dark:text-blue-400 border-slate-300 dark:border-slate-600 cursor-pointer' : 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600 border-slate-200 dark:border-slate-700 cursor-not-allowed']">
+                            <i class="fas fa-chevron-left text-sm" aria-hidden="true"></i>
+                        </button>
+                        <button @click="goToNextElement" :disabled="!hasNextElement" aria-label="Élément suivant" :class="['btn-press px-3 py-2 rounded-r-full border-y border-r transition flex items-center justify-center', hasNextElement ? 'bg-white dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 text-blue-600 dark:text-blue-400 border-slate-300 dark:border-slate-600 cursor-pointer' : 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600 border-slate-200 dark:border-slate-700 cursor-not-allowed']">
+                            <i class="fas fa-chevron-right text-sm" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="font-black uppercase tracking-tight text-sm md:text-xl truncate text-slate-800 dark:text-white">{{ pageTitle }}</h1>
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                    <div class="relative hidden sm:block">
+                        <input type="text" v-model="searchQuery" aria-label="Barre de recherche" placeholder="Rechercher..." class="bg-slate-100 dark:bg-slate-900 border-none rounded-full px-4 py-2 text-xs font-bold w-48 focus:w-64 transition-all focus:ring-2 focus:ring-blue-500 dark:text-white placeholder-slate-400">
+                        <i class="fas fa-search absolute right-3 top-2.5 text-slate-400 text-xs" aria-hidden="true"></i>
+                    </div>
+                    <button @click="toggleMobileSearch" aria-label="Basculer la barre de recherche" class="sm:hidden w-8 h-8 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-300">
+                        <i class="fas fa-search text-xs" aria-hidden="true"></i>
+                    </button>
+
+                    <button @click="toggleDarkMode" :aria-label="isDarkMode ? 'Passer au mode clair' : 'Passer au mode sombre'" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 text-amber-500 dark:text-blue-300 flex items-center justify-center transition hover:scale-110">
+                        <i :class="['fas', isDarkMode ? 'fa-moon' : 'fa-sun']" aria-hidden="true"></i>
+                    </button>
+
+                    <button @click="goHome" aria-label="Retour à l'accueil" class="btn-press bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg shadow-md text-[10px] font-black uppercase tracking-widest transition-all ml-2">
+                        <i class="fas fa-home" aria-hidden="true"></i> <span class="hidden xs:inline">Accueil</span>
+                    </button>
+                </div>
+            </div>
+
+            <div v-if="showMobileSearch" class="px-2 pb-2 sm:hidden">
+                <input type="text" v-model="searchQuery" ref="mobileSearchInput" aria-label="Rechercher" placeholder="Rechercher..." class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg px-4 py-2 text-sm dark:text-white">
+            </div>
+
+            <div v-if="breadcrumbs.length > 0" class="px-4 lg:px-10 flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 overflow-x-auto hide-scrollbar whitespace-nowrap">
+                <span @click="goHome" class="cursor-pointer hover:text-blue-500"><i class="fas fa-home" aria-hidden="true"></i></span>
+                <template v-for="(crumb, index) in breadcrumbs" :key="index">
+                    <i class="fas fa-chevron-right text-[8px]" aria-hidden="true"></i>
+                    <span @click="crumb.action ? crumb.action() : null" :class="['uppercase tracking-wide', crumb.action ? 'cursor-pointer hover:text-blue-500 hover:underline' : 'text-slate-600 dark:text-slate-300']">
+                        {{ crumb.text }}
+                    </span>
+                </template>
+            </div>
+            
+            <div v-if="searchQuery.length >= 2" class="absolute top-full left-0 right-0 bg-white dark:bg-slate-800 shadow-xl border-t dark:border-slate-700 z-50 max-h-[60vh] overflow-y-auto p-4 mx-4 md:mx-10 rounded-b-2xl">
+                <h3 class="text-xs font-black uppercase text-slate-400 mb-2">Résultats pour "{{ searchQuery }}"</h3>
+                <div v-if="searchResults.length === 0" class="text-center text-sm text-slate-500 py-4">Aucun résultat trouvé.</div>
+                <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div v-for="res in searchResults" @click="handleSearchResult(res)" class="flex items-center gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer transition border border-transparent hover:border-slate-200 dark:hover:border-slate-600">
+                        <img :src="'images/' + res.img" @error="handleImgError" :alt="'Illustration de ' + res.title" loading="lazy" class="w-10 h-10 object-cover rounded bg-slate-200">
+                        <div>
+                            <div class="font-bold text-xs uppercase text-slate-800 dark:text-white">{{ res.title }}</div>
+                            <div class="text-[10px] text-slate-500 uppercase">{{ res.type }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 lg:p-10 pb-24 lg:pb-10 scroll-smooth" ref="mainScroll" :class="view.startsWith('enfant_') ? 'bg-sky-50 dark:bg-slate-900' : ''">
+            <transition name="fade" mode="out-in">
+                
+                <div v-if="view === 'enfant_home'" key="enfant_home" class="max-w-5xl mx-auto space-y-6 pb-20">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-[2rem] shadow-md border-4 border-yellow-300 flex-wrap gap-4">
+                        <h2 class="text-xl md:text-3xl font-black uppercase text-blue-600 tracking-tight">🧸 Parcours Animaux</h2>
+                        <div class="flex items-center gap-3">
+                            <button @click="view = 'enfant_recap'" class="bg-yellow-400 hover:bg-yellow-500 text-slate-900 px-4 py-2 rounded-xl font-black shadow-sm active:scale-95 transition text-xs md:text-sm flex items-center gap-2">
+                                <span class="text-lg">🏆</span> Médailles
+                                <span v-if="reussitesEnfant.length" class="bg-white px-2 py-0.5 rounded-full">{{ reussitesEnfant.length }}</span>
+                            </button>
+                            <button @click="goHome" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl font-black shadow-sm active:scale-95 transition text-xs md:text-sm">Quitter</button>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-8">
+                        <div v-for="animal in animauxEnfant" :key="animal.id" @click="selectEnfantAnimal(animal)" class="bg-white rounded-[2.5rem] shadow-xl border-b-8 active:translate-y-2 transition cursor-pointer flex flex-col items-center justify-center p-6 text-center hover:scale-105" :style="{'border-color': animal.color}">
+                            <span class="text-6xl md:text-8xl mb-2 drop-shadow-md">{{ animal.emoji }}</span>
+                            <h3 class="text-lg md:text-2xl font-black uppercase tracking-widest mt-2" :style="{'color': animal.color}">{{ animal.nom }}</h3>
+                            <p class="text-xs md:text-sm font-bold text-slate-500 mt-1">{{ animal.desc }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else-if="view === 'enfant_liste'" key="enfant_liste" class="max-w-6xl mx-auto space-y-6 pb-20">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-[2rem] shadow-md border-4" :style="{'border-color': enfantAnimal.color}">
+                        <button @click="handleBack" class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 active:scale-95"><i class="fas fa-arrow-left text-xl"></i></button>
+                        <h2 class="text-2xl md:text-4xl font-black uppercase flex items-center gap-3" :style="{'color': enfantAnimal.color}">
+                            {{ enfantAnimal.emoji }} {{ enfantAnimal.nom }}
+                        </h2>
+                        <div class="w-12"></div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div v-for="el in currentEnfantList" :key="el.id" @click="selectEnfantElement(el)" class="bg-white rounded-[2.5rem] shadow-lg overflow-hidden border-4 border-transparent hover:border-blue-400 cursor-pointer active:scale-95 transition flex flex-col relative">
+                            <div v-if="reussitesEnfant.includes(el.id)" class="absolute top-3 right-3 z-10 text-3xl drop-shadow-md">🏆</div>
+
+                            <img :src="'images/' + (el.media.face || el.media.profil)" @error="handleImgError" loading="lazy" class="w-full h-48 object-contain bg-slate-50 p-2 border-b-4 border-slate-100">
+                            <div class="p-6 text-center flex-1 flex flex-col justify-center">
+                                <h3 class="font-black text-xl text-slate-800 uppercase leading-tight">{{ el.nom }}</h3>
+                            </div>
+                        </div>
+                        <div v-if="currentEnfantList.length === 0" class="col-span-full text-center text-slate-500 py-10 font-bold">Aucun exercice trouvé pour cet animal.</div>
+                    </div>
+                </div>
+
+                <div v-else-if="view === 'enfant_element' && curr" key="enfant_element" class="max-w-4xl mx-auto space-y-6 pb-20">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-[2rem] shadow-md border-4" :style="{'border-color': enfantAnimal.color}">
+                        <button @click="handleBack" class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 active:scale-95"><i class="fas fa-arrow-left text-xl"></i></button>
+                        <h2 class="text-xl md:text-3xl font-black uppercase text-slate-800 text-center">
+                            {{ curr.nom }}
+                            <span v-if="reussitesEnfant.includes(curr.id)" class="ml-2 text-2xl">🏆</span>
+                        </h2>
+                        <div class="w-12"></div>
+                    </div>
+
+                    <div class="bg-white rounded-[3rem] p-4 md:p-8 shadow-2xl border-b-8" :style="{'border-color': enfantAnimal.color}">
+                        <img :src="'images/' + (curr.media.face || curr.media.profil)" @error="handleImgError" class="w-full h-auto max-h-[50vh] object-contain rounded-2xl mb-8">
+                        
+                        <div class="flex flex-col md:flex-row gap-4 items-center justify-center">
+                            <button @click="speakElement(curr)" class="w-full md:w-auto flex-1 bg-blue-500 hover:bg-blue-600 text-white p-6 rounded-[2rem] font-black uppercase text-xl md:text-2xl shadow-lg active:scale-95 transition flex items-center justify-center gap-4">
+                                <i class="fas fa-volume-up text-3xl"></i> Écouter
+                            </button>
+                            <button @click="toggleReussiteEnfant(curr.id)" 
+                                    :class="reussitesEnfant.includes(curr.id) ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'" 
+                                    class="w-full md:w-auto flex-1 text-white p-6 rounded-[2rem] font-black uppercase text-xl md:text-2xl shadow-lg active:scale-95 transition flex items-center justify-center gap-4">
+                                <i class="fas text-3xl" :class="reussitesEnfant.includes(curr.id) ? 'fa-medal' : 'fa-check-circle'"></i> 
+                                {{ reussitesEnfant.includes(curr.id) ? 'C\'est gagné !' : 'J\'ai réussi !' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else-if="view === 'enfant_recap'" key="enfant_recap" class="max-w-6xl mx-auto space-y-6 pb-20">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-[2rem] shadow-md border-4 border-yellow-400">
+                        <button @click="handleBack" class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 active:scale-95 hover:bg-slate-200"><i class="fas fa-arrow-left text-xl"></i></button>
+                        <h2 class="text-2xl md:text-4xl font-black uppercase flex items-center gap-3 text-slate-800">
+                            🏆 Mes Médailles
+                        </h2>
+                        <div class="w-12"></div>
+                    </div>
+
+                    <div v-if="recapReussitesEnfant.length === 0" class="text-center py-20 bg-white rounded-[2.5rem] shadow-lg border-4 border-dashed border-slate-200">
+                        <span class="text-7xl mb-4 block">😢</span>
+                        <p class="text-xl font-bold text-slate-500">Tu n'as pas encore de médailles.</p>
+                        <p class="text-slate-400 mt-2">Fais des exercices et clique sur "J'ai réussi !"</p>
+                    </div>
+
+                    <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+                        <div v-for="el in recapReussitesEnfant" :key="'recap_'+el.id" class="bg-white rounded-[2.5rem] shadow-lg overflow-hidden border-4 border-amber-300 relative flex flex-col pt-4 hover:scale-105 transition-transform cursor-pointer" @click="selectEnfantElement(el)">
+                            <div class="absolute top-2 right-2 text-3xl drop-shadow-md">🏆</div>
+                            <div class="absolute top-2 left-2 text-2xl bg-slate-100 rounded-full w-10 h-10 flex items-center justify-center shadow-sm">{{ getAnimalEmoji(el.mode_enfant) }}</div>
+                            <img :src="'images/' + (el.media.face || el.media.profil)" @error="handleImgError" class="w-full h-32 object-contain bg-slate-50 p-2 mt-6">
+                            <div class="p-4 text-center border-t-2 border-slate-50 flex-1 flex items-center justify-center">
+                                <h3 class="font-black text-sm text-slate-800 uppercase leading-tight">{{ el.nom }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else-if="view === 'home'" key="home" class="max-w-6xl mx-auto space-y-12">
+                    
+                    <div class="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-lg p-6 md:p-8 md:mx-10 flex flex-col md:flex-row items-center gap-6 md:gap-8 border-t-8 border-blue-500">
+                        <div class="shrink-0">
+                            <img src="images/LOGO GYM ECOLE.jpg" alt="Logo Gym École" class="w-32 h-32 md:w-40 md:h-40 object-cover rounded-3xl shadow-md border-4 border-slate-50 dark:border-slate-700" @error="handleImgError">
+                        </div>
+                        
+                        <div class="flex-1 text-center md:text-left">
+                            <h2 class="text-xl md:text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight mb-3">
+                                Bienvenue sur Gym École
+                            </h2>
+                            <p class="text-sm md:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+                                L’application <strong class="text-blue-600 dark:text-blue-400 font-black">Gym École</strong> est une ressource pédagogique numérique du GREIDEPS de l'académie de Créteil, destinée aux professeurs des écoles, aux enseignants d'EPS et à leurs élèves
+                                <span v-if="!showFullText" @click="showFullText = true" class="text-blue-600 font-bold cursor-pointer hover:underline">... plus</span><span v-show="showFullText">. Elle a pour but d'accompagner l'enseignement de la gymnastique en proposant des démonstrations visuelles des agrès (Sol, Poutre, Barres), des fiches d'échauffement ludique, des progressions pédagogiques (Unités d'Apprentissage DSDEN 77) et le suivi des attendus du "Brevet du petit gymnaste" (DSDEN 93).
+                          <span @click="showFullText = false" class="text-blue-600 font-bold cursor-pointer hover:underline"> moins</span>
+                            </span>
+                            </p>
+                        </div>
+                        
+                        <div class="shrink-0 flex flex-col items-center justify-center border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-700 pt-6 md:pt-0 md:pl-8 mt-2 md:mt-0">
+                            <a href="https://eps.ac-creteil.fr/spip.php?rubrique188" target="_blank" rel="noopener noreferrer" class="group flex flex-col items-center hover:scale-105 transition-transform" aria-label="Visiter le site du GREIDEPS">
+                                <img src="images/greideps.png" alt="Logo GREIDEPS Académie de Créteil" class="w-24 h-auto object-contain drop-shadow-sm bg-white rounded-xl p-1" @error="handleImgError">
+                                <span class="text-[10px] font-black text-slate-400 mt-3 uppercase tracking-widest group-hover:text-blue-500 transition-colors text-center">Découvrir<br>le GREIDEPS</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 md:gap-8 max-w-3xl mx-auto md:px-10">
+                        <div @click="openModal('images/GUIDE SECURITE EN GYM.jpg')" class="group w-full bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-lg hover:shadow-2xl transition-all cursor-pointer overflow-hidden border-b-8 border-red-500 hover:-translate-y-2 aspect-square relative skeleton-wrapper">
+                            <img src="images/SECURITE.jpg" @error="handleImgError" alt="Vignette Sécurité" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                        </div>
+                        <div @click="openWarmupList" class="group w-full bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-lg hover:shadow-2xl transition-all cursor-pointer overflow-hidden border-b-8 border-amber-500 hover:-translate-y-2 aspect-square relative skeleton-wrapper">
+                            <img src="images/ECHAUFFEMENT GYM.jpg" @error="handleImgError" alt="Ouvrir la liste des échauffements" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4 px-10">
+                        <div class="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
+                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Les Agrès</span>
+                        <div class="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+                        <div v-for="a in ['SOL', 'POUTRE', 'BARRES']" @click="selectAgre(a)" :class="['group bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-lg hover:shadow-2xl transition-all cursor-pointer overflow-hidden border-b-8 hover:-translate-y-2 aspect-square skeleton-wrapper', 'border-'+a]">
+                            <img :src="'images/' + a + '.jpg'" @error="handleImgError" :alt="'Agrès ' + a" loading="lazy" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4 px-10">
+                        <div class="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
+                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Pédagogie</span>
+                        <div class="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
+                    </div>
+
+                    <div class="flex justify-center md:px-10">
+                        <div @click="openPedagogyMenu" class="group w-full md:w-2/3 lg:w-1/2 bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-lg hover:shadow-2xl transition-all cursor-pointer overflow-hidden border-b-8 border-indigo-500 hover:-translate-y-2 aspect-video relative skeleton-wrapper">
+                            <img src="images/PROPOSITION PROGRESSIONS PEDAGOGIQUES.jpg" @error="handleImgError" alt="Progressions pédagogiques" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else-if="view === 'pedagogy_menu'" key="pedagogy_menu" class="max-w-6xl mx-auto space-y-12">
+                    <div class="text-center mb-8">
+                        <h2 class="text-2xl font-black text-indigo-500 uppercase tracking-tighter">Outils Pédagogiques</h2>
+                        <p class="text-slate-400 text-sm font-bold">Sélectionnez une ressource</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:px-10">
+                        <div @click="openUnitsList" class="group bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-lg hover:shadow-2xl transition-all cursor-pointer overflow-hidden border-b-8 border-purple-500 hover:-translate-y-2 aspect-square md:aspect-video relative skeleton-wrapper">
+                            <img src="images/UNITES D APPRENTISSAGE.jpg" @error="handleImgError" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                            <div class="absolute bottom-0 w-full bg-purple-600/90 text-white text-center text-xs md:text-sm font-black py-2 backdrop-blur-sm uppercase tracking-widest">DSDEN 77 - EPS - GYM</div>
+                        </div>
+                        <div @click="openBrevetList" class="group bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-lg hover:shadow-2xl transition-all cursor-pointer overflow-hidden border-b-8 border-teal-500 hover:-translate-y-2 aspect-square md:aspect-video relative skeleton-wrapper">
+                            <img src="images/BREVET DU PETIT GYMNASTE.jpg" @error="handleImgError" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                             <div class="absolute bottom-0 w-full bg-teal-600/90 text-white text-center text-xs md:text-sm font-black py-2 backdrop-blur-sm uppercase tracking-widest">DSDEN 93 - EPS - GYM</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else-if="view === 'brevet_list'" key="brevet_list" class="max-w-7xl mx-auto space-y-12">
+                     <div class="bg-teal-50 dark:bg-teal-900/20 rounded-[2rem] p-6 border border-teal-200 dark:border-teal-800 mx-4 md:mx-0">
+                        <h3 class="flex items-center gap-2 font-black text-teal-700 dark:text-teal-400 uppercase tracking-widest text-sm mb-4">
+                            <i class="fas fa-folder-open" aria-hidden="true"></i> Ressources DSDEN 93
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <button v-for="doc in docs93" @click="openDoc('DSDEN 93 - EPS - GYM - Ressources pédagogiques', doc.file)" class="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-teal-100 dark:border-slate-700 hover:border-teal-400 hover:shadow-md transition flex items-center gap-3 text-left">
+                                <i class="fas fa-file-pdf text-red-500 text-lg" aria-hidden="true"></i>
+                                <span class="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase leading-tight">{{ doc.nom }}</span>
+                            </button>
+                        </div>
+                     </div>
+                     <div v-for="agre in ['SOL', 'POUTRE', 'BARRES']" :key="agre" class="mb-10">
+                        <div class="flex items-center gap-4 mb-6 sticky top-0 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur py-2 z-10">
+                            <div :class="['w-2 h-8 rounded-full', 'bg-'+agre]"></div>
+                            <h2 :class="['text-xl font-black uppercase tracking-tight', 'text-'+agre]">{{ agre }}</h2>
+                        </div>
+                        <div v-for="action in getBrevetActions(agre)" :key="action" class="mb-8">
+                            <h3 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 pl-3 border-l-4 border-slate-200 dark:border-slate-700">{{ action }}</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div v-for="b in getBrevetElements(agre, action)" @click="selectElement(b)" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm hover:shadow-xl transition cursor-pointer overflow-hidden border border-slate-200 dark:border-slate-700 group flex flex-col h-full hover:-translate-y-1">
+                                    <div class="aspect-video w-full bg-slate-100 dark:bg-white p-2 border-b border-slate-100 dark:border-slate-700 relative overflow-hidden">
+                                         <img :src="'images/' + b.media.face" @error="handleImgError" loading="lazy" class="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition duration-500">
+                                    </div>
+                                    <div class="p-5 flex-1 flex flex-col justify-between">
+                                        <h3 class="font-black text-sm uppercase text-slate-800 dark:text-slate-100 mb-2 leading-tight group-hover:text-blue-500 transition">{{ b.nom }}</h3>
+                                        <div class="flex items-center text-[10px] text-slate-400 uppercase font-bold tracking-wider gap-2"><i class="fas fa-eye" aria-hidden="true"></i> Voir le détail</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                     </div>
+                </div>
+
+                <div v-else-if="view === 'units_list'" key="units_list" class="max-w-6xl mx-auto space-y-12">
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:px-20">
+                        <div v-for="u in units.filter(u => u.id === 'SITUATIONS_ALL' || u.titre.toUpperCase().includes('SITUATION'))" @click="selectUnit(u)" class="bg-white dark:bg-slate-800 rounded-[2rem] shadow-md overflow-hidden hover:scale-105 transition-all cursor-pointer border-2 border-purple-400 flex flex-col ring-4 ring-purple-50 dark:ring-purple-900/30">
+                            <div class="w-full aspect-video bg-slate-200 dark:bg-slate-700 relative">
+                                <img :src="'images/' + u.img" @error="handleImgError" loading="lazy" class="w-full h-full object-cover">
+                            </div>
+                            <div class="p-4 text-center font-black text-xs uppercase text-purple-700 dark:text-purple-400 bg-white dark:bg-slate-800 flex-1 flex items-center justify-center tracking-wider"><i class="fas fa-star mr-2"></i> {{ u.titre }}</div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-[2rem] shadow-md overflow-hidden border-2 border-indigo-400 flex flex-col ring-4 ring-indigo-50 dark:ring-indigo-900/30">
+                            <div class="bg-indigo-100 dark:bg-indigo-900/50 p-4 border-b border-indigo-200 dark:border-indigo-700 flex items-center justify-center gap-2">
+                                <i class="fas fa-file-pdf text-indigo-600 dark:text-indigo-400 text-xl" aria-hidden="true"></i>
+                                <span class="font-black text-indigo-800 dark:text-indigo-200 uppercase tracking-widest text-xs">Ressources DSDEN 77</span>
+                            </div>
+                            <div class="p-4 overflow-y-auto max-h-64 space-y-2 bg-slate-50 dark:bg-slate-800/50 flex-1">
+                                <button v-for="doc in docs77" @click="openDoc('DSDEN 77 - EPS - GYM - Ressources pédagogiques', doc.file)" class="w-full text-left flex items-center gap-3 p-3 bg-white dark:bg-slate-700 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-slate-200 dark:border-slate-600 transition group">
+                                    <div class="w-8 h-8 rounded-full bg-red-100 text-red-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition"><i class="fas fa-file-pdf"></i></div>
+                                    <span class="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase group-hover:text-indigo-600 dark:group-hover:text-indigo-300">{{ doc.nom }}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div v-for="u in units.filter(u => u.id !== 'SITUATIONS_ALL' && !u.titre.toUpperCase().includes('SITUATION'))" @click="selectUnit(u)" class="bg-white dark:bg-slate-800 rounded-[2rem] shadow-md overflow-hidden hover:scale-105 transition-all cursor-pointer border-2 border-transparent hover:border-purple-400 flex flex-col hover-lift">
+                             <div class="w-full aspect-video bg-slate-200 dark:bg-slate-700 relative">
+                                <img :src="'images/' + u.img" @error="handleImgError" loading="lazy" class="w-full h-full object-cover">
+                            </div>
+                            <div class="p-4 text-center font-black text-[10px] md:text-xs uppercase text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 flex-1 flex items-center justify-center">{{ u.titre }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else-if="view === 'all_situations'" key="all_situations" class="max-w-7xl mx-auto pb-20">
+                    <div v-for="(situations, uaId) in groupedSituations" :key="uaId" class="mb-12">
+                        <div class="flex items-center gap-4 mb-6 sticky top-0 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur py-2 z-10">
+                            <div class="w-2 h-8 bg-purple-500 rounded-full"></div>
+                            <h2 class="text-xl font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight">{{ getUnitTitle(uaId) }}</h2>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div v-for="sit in situations" @click="openSituationDetail(sit)" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm hover:shadow-xl transition cursor-pointer overflow-hidden border border-slate-200 dark:border-slate-700 group flex flex-col h-full hover:-translate-y-1">
+                                <div class="aspect-video w-full bg-slate-100 dark:bg-white p-2 border-b border-slate-100 dark:border-slate-700 relative overflow-hidden">
+                                    <img :src="'images/' + sit.img_dispo" @error="handleImgError" loading="lazy" class="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition duration-500">
+                                    <div class="absolute top-2 right-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur px-2 py-1 rounded-md text-[10px] font-bold text-slate-500 dark:text-slate-300 border border-slate-200 dark:border-slate-600">{{ sit.ref }}</div>
+                                </div>
+                                <div class="p-5 flex-1 flex flex-col justify-between">
+                                    <h3 class="font-black text-sm uppercase text-slate-800 dark:text-slate-100 mb-2 leading-tight group-hover:text-purple-600 dark:group-hover:text-purple-400 transition">{{ sit.nom }}</h3>
+                                    <div class="flex items-center text-[10px] text-slate-400 uppercase font-bold tracking-wider gap-2"><i class="fas fa-info-circle"></i> Voir la fiche</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else-if="view === 'unit_sessions' && selectedUnit" key="unit_sessions" class="max-w-4xl mx-auto">
+                    <div class="relative pl-8 md:pl-0">
+                        <div class="absolute left-4 md:left-1/2 top-0 bottom-0 w-1 bg-purple-100 dark:bg-slate-700 -translate-x-1/2"></div>
+                        <div v-for="(s, index) in getSessions(selectedUnit.id)" :key="s.id" class="relative mb-8 group">
+                            <div class="absolute left-4 md:left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-white dark:bg-slate-800 border-4 border-purple-500 z-10 group-hover:scale-125 transition shadow-sm"></div>
+                            <div :class="['md:w-5/12 ml-8 md:ml-0 bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm hover:shadow-lg border border-slate-100 dark:border-slate-700 hover:border-purple-400 transition cursor-pointer flex items-center justify-between', index % 2 === 0 ? 'md:mr-auto' : 'md:ml-auto']" @click="selectSession(s)">
+                                <div>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Étape {{ index + 1 }}</span>
+                                    <h3 class="font-black text-lg text-purple-700 dark:text-purple-400 uppercase">Séance {{ s.id }}</h3>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ s.parts.length }} activité(s)</p>
+                                </div>
+                                <div class="w-10 h-10 rounded-full bg-purple-50 dark:bg-slate-700 text-purple-600 dark:text-purple-300 flex items-center justify-center"><i class="fas fa-chevron-right"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else-if="view === 'session_detail' && selectedSession" key="session_detail" class="max-w-5xl mx-auto space-y-8 pb-20">
+                    <div v-for="(partStr, index) in selectedSession.parts" :key="index" class="bg-white dark:bg-slate-800 rounded-[2rem] shadow-md overflow-hidden border border-slate-100 dark:border-slate-700 hover:shadow-lg transition print-break-inside-avoid">
+                        <div class="bg-slate-50 dark:bg-slate-700/50 p-4 border-b dark:border-slate-700 flex items-center justify-between">
+                            <span class="bg-purple-600 text-white text-[10px] font-black px-2 py-1 rounded">PARTIE {{ index + 1 }}</span>
+                        </div>
+                        <div class="p-6">
+                            <div v-if="!getSituationData(selectedUnit.id, partStr)" class="text-center font-bold text-slate-500 uppercase py-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-600">{{ partStr }}</div>
+                            <div v-else>
+                                <div class="flex flex-col gap-6">
+                                    <h3 class="font-black text-xl md:text-2xl uppercase text-slate-800 dark:text-slate-100 border-l-4 border-purple-500 pl-4">{{ getSituationData(selectedUnit.id, partStr).data.nom }}</h3>
+                                    <div class="flex flex-col lg:flex-row gap-8">
+                                        <div class="w-full lg:w-1/3 flex flex-col gap-4">
+                                            <div class="relative group cursor-pointer w-full max-w-[200px] mx-auto lg:mx-0 rounded-2xl overflow-hidden shadow-md border-2 border-slate-100 dark:border-slate-700 bg-white" @click="openModal('images/' + getSituationData(selectedUnit.id, partStr).data.img_dispo)">
+                                                <img :src="'images/' + getSituationData(selectedUnit.id, partStr).data.img_dispo" @error="handleImgError" loading="lazy" class="w-full h-32 object-contain transition group-hover:opacity-90">
+                                            </div>
+                                            <div class="space-y-4">
+                                                <div class="pl-3 border-l-2 border-blue-400">
+                                                    <h4 class="font-bold text-[10px] text-blue-500 uppercase mb-1"><i class="fas fa-bullseye"></i> But</h4>
+                                                    <p class="text-sm text-slate-600 dark:text-slate-300 leading-snug">{{ getSituationData(selectedUnit.id, partStr).data.but }}</p>
+                                                </div>
+                                                <div class="pl-3 border-l-2 border-emerald-400">
+                                                    <h4 class="font-bold text-[10px] text-emerald-500 uppercase mb-1"><i class="fas fa-check"></i> Critères</h4>
+                                                    <p class="text-sm text-slate-600 dark:text-slate-300 leading-snug">{{ getSituationData(selectedUnit.id, partStr).data.criteres }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex-1 bg-slate-50 dark:bg-slate-700/30 rounded-2xl p-4 lg:p-6 border border-slate-100 dark:border-slate-700">
+                                            <div v-if="getSituationData(selectedUnit.id, partStr).data.imgs_elements?.length > 0" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                <div v-for="elImg in getSituationData(selectedUnit.id, partStr).data.imgs_elements" class="group relative aspect-square bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-600 overflow-hidden cursor-pointer hover:shadow-md transition" @click="openModal('images/' + elImg)">
+                                                    <img :src="'images/' + elImg" @error="handleImgError" loading="lazy" class="w-full h-full object-contain p-1">
+                                                </div>
+                                            </div>
+                                            <div v-if="getSituationData(selectedUnit.id, partStr).evoText" class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-600">
+                                                <div class="flex items-start gap-3">
+                                                    <div class="bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-300 p-2 rounded-lg shrink-0"><i class="fas fa-level-up-alt"></i></div>
+                                                    <div>
+                                                        <h4 class="font-bold text-[10px] text-rose-500 uppercase">Évolution</h4>
+                                                        <p class="text-sm font-bold text-slate-700 dark:text-slate-300">{{ getSituationData(selectedUnit.id, partStr).evoText }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else-if="view === 'warmup'" key="warmup" class="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div v-for="w in warmups" @click="openWarmupDetail(w)" class="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-md overflow-hidden hover:scale-105 transition-all cursor-pointer border-2 border-transparent hover:border-amber-400">
+                        <img :src="'images/' + w.img" @error="handleImgError" loading="lazy" class="w-full aspect-square object-cover">
+                        <div class="p-4 text-center font-bold text-[10px] uppercase text-slate-700 dark:text-slate-300 leading-tight">{{ w.nom }}</div>
+                    </div>
+                </div>
+
+                <div v-else-if="view === 'warmup_detail' && selectedWarmup" key="warmup_detail" class="max-w-7xl mx-auto pb-20">
+                    <div class="grid lg:grid-cols-2 gap-10">
+                        <div class="space-y-8">
+                            <div class="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-xl overflow-hidden border-8 border-white dark:border-slate-700">
+                                <img :src="'images/' + selectedWarmup.img" @error="handleImgError" loading="lazy" @click="openModal('images/' + selectedWarmup.img)" class="w-full h-auto block cursor-pointer hover:opacity-95 transition">
+                            </div>
+                            <div class="bg-black rounded-[2.5rem] overflow-hidden shadow-2xl aspect-video border-8 border-white dark:border-slate-700">
+                                <video controls playsinline class="w-full h-full object-cover"><source :src="'videos/' + selectedWarmup.video" type="video/mp4"></video>
+                            </div>
+                        </div>
+                        <div class="flex flex-col h-full space-y-8">
+                            <div class="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] shadow-sm border-l-8 border-amber-500 flex-grow">
+                                <h3 class="text-amber-700 dark:text-amber-500 font-black uppercase text-sm tracking-widest mb-6 flex items-center gap-3"><i class="fas fa-book-open text-xl"></i> L'Histoire</h3>
+                                <div class="text-slate-700 dark:text-slate-300 leading-relaxed font-medium whitespace-pre-line italic text-lg">{{ selectedWarmup.histoire }}</div>
+                            </div>
+                            <button @click="openWarmupPdf" class="w-full bg-rose-600 hover:bg-rose-700 text-white p-8 rounded-[2.5rem] font-black uppercase text-base flex items-center justify-center gap-4 shadow-xl transition transform active:scale-95"><i class="fas fa-file-pdf text-3xl"></i> Fiche PDF</button>
+                        </div>
+                    </div>
+                </div>
+                
+                 <div v-else-if="view === 'actions'" key="actions" class="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <div v-for="act in actionsData[selectedAgre]" @click="selectAction(act.nom)" :class="['group bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-lg hover:shadow-2xl transition-all cursor-pointer overflow-hidden border-b-8 hover:-translate-y-2 aspect-square', 'border-'+selectedAgre]">
+                        <img :src="'images/' + act.img" @error="handleImgError" loading="lazy" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                        <div class="absolute bottom-0 w-full bg-black/50 text-white text-center text-xs font-black py-1 backdrop-blur-sm">{{act.nom}}</div>
+                    </div>
+                </div>
+
+                <div v-else-if="view === 'elements_list'" key="elements_list" class="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div v-for="el in getElements(selectedAgre, selectedAction)" @click="selectElement(el)" class="bg-white dark:bg-slate-800 rounded-[2rem] shadow-md overflow-hidden hover:border-blue-500 border-2 border-transparent cursor-pointer transition p-2 hover-lift relative">
+                        <div v-if="isInCircuit(el.id)" class="absolute top-2 left-2 z-10 bg-orange-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-md border border-white"><i class="fas fa-check text-[10px]"></i></div>
+                        <div v-if="el.difficulte" :class="getDifficultyClass(el.difficulte)" class="absolute top-3 right-3 z-10 px-2 py-1 rounded-full text-[10px] font-black uppercase shadow-sm border">{{ el.difficulte }}</div>
+                        <img :src="'images/' + (el.media.face || el.media.profil)" @error="handleImgError" loading="lazy" class="w-full aspect-video object-contain bg-slate-50 dark:bg-slate-700 rounded-xl">
+                        <div class="p-4 text-center font-bold text-[11px] uppercase text-slate-700 dark:text-slate-200">{{ el.nom }}</div>
+                    </div>
+                </div>
+
+                <div v-else-if="view === 'circuit'" key="circuit" class="max-w-6xl mx-auto space-y-8 pb-20">
+                    <div class="flex justify-between items-center bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700">
+                        <h2 class="text-xl md:text-2xl font-black uppercase tracking-tight text-orange-500 flex items-center gap-3"><i class="fas fa-route"></i> Mon Circuit</h2>
+                        <button v-if="circuit.length" @click="clearCircuit" class="text-xs font-black text-rose-500 uppercase hover:underline no-print">Tout effacer</button>
+                    </div>
+                    <div v-if="circuitElements.length === 0" class="text-center py-20 bg-white dark:bg-slate-800 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-700">
+                        <i class="fas fa-route text-4xl text-slate-300 mb-4"></i>
+                        <p class="text-slate-500 font-bold uppercase text-sm">Aucun élément dans votre circuit.</p>
+                        <button @click="goHome" class="mt-4 text-blue-600 text-xs font-black hover:underline">Ajouter des exercices +</button>
+                    </div>
+                    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div v-for="el in circuitElements" :key="el.id" @click="selectElement(el)" class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-md border border-slate-100 dark:border-slate-700 relative cursor-pointer hover:shadow-lg transition group hover:-translate-y-1 flex flex-col h-full print-break-inside-avoid">
+                            <div class="w-full aspect-video bg-slate-50 dark:bg-slate-700 p-2 relative">
+                                <img :src="'images/' + (el.media.face || el.media.profil)" @error="handleImgError" loading="lazy" class="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition">
+                                <button @click.stop="toggleCircuit(el.id)" class="absolute top-2 right-2 w-8 h-8 rounded-full bg-white text-rose-500 shadow flex items-center justify-center hover:bg-rose-50 transition no-print"><i class="fas fa-trash"></i></button>
+                            </div>
+                            <div class="p-4 flex-1 flex flex-col justify-between">
+                                <div>
+                                    <span :class="['text-[10px] font-black px-2 py-1 rounded border', 'bg-'+el.agre+'/10 text-'+el.agre+' border-'+el.agre+'/20']">{{ el.agre }}</span>
+                                    <h3 class="font-black text-slate-800 dark:text-white uppercase text-sm mt-2">{{ el.nom }}</h3>
+                                    <p class="text-[10px] text-slate-500 uppercase mt-1 mb-2">{{ el.action }}</p>
+                                    
+                                    <div v-if="el.criteres_realisation && el.criteres_realisation.length" class="mt-2 text-left bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
+                                        <h4 class="text-[9px] font-black uppercase text-blue-500 mb-1"><i class="fas fa-info-circle"></i> Instructions</h4>
+                                        <ul class="space-y-1">
+                                            <li v-for="c in el.criteres_realisation" :key="c" class="text-[9px] text-slate-600 dark:text-slate-300 flex items-start gap-1 leading-tight">
+                                                <i class="fas fa-caret-right text-blue-400 mt-[2px] shrink-0"></i>
+                                                <span>{{ c }}</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button v-if="circuit.length" onclick="window.print()" class="no-print w-full py-4 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-[2rem] font-black uppercase tracking-widest shadow-xl hover:scale-[1.02] transition flex items-center justify-center gap-3"><i class="fas fa-print text-xl"></i> Imprimer les fiches de l'atelier</button>
+                </div>
+
+                <div v-else-if="view === 'element' && curr" key="element" class="max-w-5xl mx-auto space-y-8 pb-20">
+                    <div class="flex justify-between items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 no-print">
+                        <button @click="toggleCircuit(curr.id)" :class="['flex-1 py-2 rounded-2xl text-[10px] sm:text-xs font-black uppercase transition flex items-center justify-center gap-2 border', isInCircuit(curr.id) ? 'bg-orange-500 text-white border-orange-400 shadow-md' : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100 dark:bg-slate-700 dark:text-orange-400 dark:border-slate-600']">
+                           <i :class="['fas', isInCircuit(curr.id) ? 'fa-check' : 'fa-plus']"></i> {{ isInCircuit(curr.id) ? 'Dans mon circuit' : 'Ajouter au circuit' }}
+                        </button>
+                        <button @click="speakElement(curr)" class="shrink-0 px-4 py-2 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 dark:bg-slate-700 dark:text-blue-400 dark:border-slate-600 transition flex items-center justify-center gap-2 text-[10px] sm:text-xs font-black uppercase">
+                            <i class="fas fa-volume-up text-base"></i> <span class="hidden sm:inline">Écouter</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-black rounded-[3rem] overflow-hidden shadow-2xl relative aspect-video border-[10px] border-white dark:border-slate-700" @click="openModal(curr.media)">
+                        <div v-if="curr.difficulte" :class="getDifficultyClass(curr.difficulte)" class="absolute top-6 left-6 z-20 px-4 py-2 rounded-full text-sm font-black shadow-xl backdrop-blur-md border border-white/20">{{ curr.difficulte }}</div>
+                        <img :src="'images/' + currentFile(curr, globalView)" @error="handleImgError" loading="lazy" :alt="'Démonstration de ' + curr.nom" class="w-full h-full object-contain">
+                         <div class="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-xs font-bold no-print"><i class="fas fa-expand"></i> Agrandir</div>
+                    </div>
+
+                    <div v-if="curr.securite" class="bg-amber-50 dark:bg-amber-900/20 p-5 rounded-[2.5rem] border-2 border-amber-400 shadow-sm flex flex-col md:flex-row items-center gap-6 print-break-inside-avoid">
+                        <div class="shrink-0 w-16 h-16 bg-amber-100 dark:bg-amber-800 rounded-full flex items-center justify-center text-amber-500 dark:text-amber-400 text-3xl"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="text-center md:text-left flex-1">
+                            <h4 class="text-amber-600 dark:text-amber-400 font-black uppercase text-lg tracking-widest mb-1">Sécurité</h4>
+                            <p class="text-slate-700 dark:text-slate-300 text-sm font-bold leading-relaxed">{{ curr.securite }}</p>
+                        </div>
+                    </div>
+                    
+                    <div v-if="curr.flashcard" class="bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 shadow-lg border-2 border-dashed border-blue-400 flex flex-col md:flex-row items-center gap-6 print-break-inside-avoid">
+                        <div class="shrink-0"><img :src="'images/' + curr.flashcard" @error="handleImgError" loading="lazy" class="w-48 h-48 object-contain rounded-2xl shadow-md bg-white"></div>
+                        <div class="text-center md:text-left">
+                            <h4 class="text-blue-600 dark:text-blue-400 font-black uppercase text-lg tracking-widest flex items-center justify-center md:justify-start gap-2"><i class="fas fa-paw"></i> Comme un animal !</h4>
+                            <p class="text-slate-600 dark:text-slate-300 text-sm font-bold mt-2 italic">Pour cet exercice, essaye d'imiter les mouvements de l'animal sur sa flashcard !</p>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6 print-break-inside-avoid">
+                        <div class="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 space-y-4">
+                            <h4 class="text-xs font-black uppercase text-blue-700 dark:text-blue-400 tracking-widest"><i class="fas fa-question-circle"></i> Comment faire ?</h4>
+                            <ul class="space-y-3"><li v-for="c in curr.criteres_realisation" class="text-sm font-bold text-slate-700 dark:text-slate-300 italic flex gap-3"><i class="fas fa-chevron-right text-blue-400 mt-1 shrink-0 text-[10px]"></i> {{ c }}</li></ul>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 space-y-4">
+                            <h4 class="text-xs font-black uppercase text-emerald-700 dark:text-emerald-400 tracking-widest"><i class="fas fa-check-circle"></i> Je réussis si ...</h4>
+                            <ul class="space-y-3"><li v-for="c in curr.criteres_reussite" class="text-sm font-bold text-slate-700 dark:text-slate-300 flex gap-3"><i class="fas fa-check-circle text-emerald-500 mt-1 shrink-0 text-[10px]"></i> {{ c }}</li></ul>
+                        </div>
+                    </div>
+
+                    <div v-if="curr.etapes && curr.etapes.length" class="space-y-4 print-break-inside-avoid">
+                        <h4 class="font-black uppercase text-xs tracking-widest text-slate-400 pl-4">Étapes d'apprentissage</h4>
+                        <div class="flex gap-4 overflow-x-auto pb-4 px-2 hide-scrollbar">
+                            <div v-for="(etape, index) in curr.etapes" @click="openModal(etape.media)" class="flex-shrink-0 w-56 bg-white dark:bg-slate-800 p-2 rounded-3xl shadow-md cursor-pointer hover:scale-105 transition border-2 border-transparent hover:border-blue-400 flex flex-col">
+                                <img :src="'images/' + etape.media.face" @error="handleImgError" loading="lazy" class="w-full aspect-video object-cover rounded-2xl mb-2">
+                                <p class="text-[10px] font-black text-center uppercase text-slate-500 dark:text-slate-400 tracking-tighter px-1">ÉTAPE {{ index + 1 }}</p>
+                                <p class="text-[11px] font-bold text-center text-slate-700 dark:text-slate-200 px-1 mt-1 leading-tight flex-1 flex items-center justify-center">{{ etape.nom }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="curr.erreurs && curr.erreurs.length" class="space-y-4 print-break-inside-avoid">
+                        <h4 class="font-black uppercase text-xs tracking-widest text-rose-400 pl-4">Erreurs fréquentes</h4>
+                        <div class="flex gap-4 overflow-x-auto pb-4 px-2 hide-scrollbar">
+                            <div v-for="err in curr.erreurs" @click="openModal(err.media, err)" class="flex-shrink-0 w-56 bg-rose-50 dark:bg-rose-900/20 p-2 rounded-3xl shadow-md cursor-pointer hover:scale-105 transition border-2 border-rose-100 dark:border-rose-800 hover:border-rose-400 flex flex-col justify-between">
+                                <div>
+                                    <img :src="'images/' + (err.media.face || err.media.profil)" @error="handleImgError" loading="lazy" class="w-full aspect-video object-cover rounded-2xl mb-2 grayscale hover:grayscale-0 transition">
+                                    <p class="text-[10px] font-black text-center uppercase text-rose-700 dark:text-rose-400 tracking-tighter px-1 mb-2">{{ err.titre }}</p>
+                                </div>
+                                <div class="px-2 pb-2 text-left">
+                                    <p class="text-[9px] text-rose-600 dark:text-rose-300 leading-tight mb-1"><strong class="font-bold">⚠️</strong> {{ err.indicateur }}</p>
+                                    <p class="text-[9px] text-emerald-600 dark:text-emerald-300 leading-tight"><strong class="font-bold">💡</strong> {{ err.correction }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </transition>
+            
+            <footer v-if="!view.startsWith('enfant_')" class="mt-20 pt-10 border-t-2 border-slate-200 dark:border-slate-700 flex flex-col md:flex-row items-center justify-between gap-8 pb-4 no-print">
+    
+    <div class="flex items-center justify-center gap-6 flex-wrap">
+        <img src="images/AC CRETEIL.png" alt="Logo de l'Académie de Créteil" loading="lazy" class="h-16 object-contain" @error="handleImgError">
+        <img src="images/LOGO FAIT AVEC L IA.jpg" alt="Logo certifiant l'utilisation de l'intelligence artificielle" loading="lazy" class="h-16 object-contain rounded-xl shadow-sm border border-slate-100 dark:border-slate-600" @error="handleImgError">
+    </div>
+    
+    <div class="flex flex-col items-center md:items-end gap-4 text-sm text-slate-500 dark:text-slate-400">
+        
+        <div class="flex flex-wrap justify-center md:justify-end items-center gap-3 md:gap-4">
+            
+            <a href="auteurs.pdf" target="_blank" class="hover:text-blue-600 dark:hover:text-blue-400 font-bold transition flex items-center gap-1.5">
+                <i class="fas fa-file-pdf text-rose-500"></i> Auteurs
+            </a>
+            
+            <span class="text-slate-300 dark:text-slate-600 hidden xs:inline">|</span>
+            
+            <a href="mentions-legales.pdf" target="_blank" class="hover:text-blue-600 dark:hover:text-blue-400 font-bold transition flex items-center gap-1.5">
+                <i class="fas fa-file-pdf text-rose-500"></i> Mentions légales
+            </a>
+            
+            <span class="text-slate-300 dark:text-slate-600 hidden md:inline">|</span>
+            
+            <a href="mailto:greid.eps@ac-creteil.fr" class="hover:text-blue-600 dark:hover:text-blue-400 font-bold transition flex items-center gap-1.5 bg-blue-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-blue-100 dark:border-slate-700">
+                <i class="fas fa-envelope text-blue-500"></i> greid.eps@ac-creteil.fr
+            </a>
+            
+        </div>
+        
+        <div class="flex flex-col md:flex-row items-center gap-3 mt-2 cursor-pointer group" @click="showCCModal = true">
+            <img src="images/cc-by-nc-nd.png" alt="Licence Creative Commons BY-NC-ND" loading="lazy" class="h-8 object-contain group-hover:scale-105 transition-transform" @error="handleImgError">
+            <span class="text-[10px] text-center md:text-left leading-tight group-hover:text-slate-700 dark:group-hover:text-slate-300 transition">Certains droits réservés.<br><strong>Cliquez pour voir les conditions.</strong></span>
+        </div>
+    </div>
+</footer>
+        </div>
+
+        <nav v-if="!view.startsWith('enfant_')" class="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-700 flex justify-around items-center p-2 z-50 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)] no-print">
+            <button @click="goHome" class="flex flex-col items-center gap-1 p-2 transition" :class="view === 'home' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'">
+                <i class="fas fa-home text-xl"></i><span class="text-[9px] font-black uppercase tracking-wider">Accueil</span>
+            </button>
+            <button @click="toggleMobileSearch" class="flex flex-col items-center gap-1 p-2 transition" :class="showMobileSearch ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'">
+                <i class="fas fa-search text-xl"></i><span class="text-[9px] font-black uppercase tracking-wider">Recherche</span>
+            </button>
+            <button @click="view = 'circuit'" class="flex flex-col items-center gap-1 p-2 transition relative" :class="view === 'circuit' ? 'text-orange-500' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'">
+                <div class="relative"><i class="fas fa-route text-xl"></i><span v-if="circuit.length" class="absolute -top-1.5 -right-2.5 bg-orange-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-white dark:border-slate-800 leading-none">{{ circuit.length }}</span></div>
+                <span class="text-[9px] font-black uppercase tracking-wider mt-1">Circuit</span>
+            </button>
+            <button @click="isSidebarOpen = true" class="flex flex-col items-center gap-1 p-2 transition text-slate-400 dark:text-slate-500 hover:text-slate-600">
+                <i class="fas fa-bars text-xl"></i><span class="text-[9px] font-black uppercase tracking-wider">Menu</span>
+            </button>
+        </nav>
+    </main>
+
+    <transition name="fade">
+        <div v-if="showCCModal" class="fixed inset-0 z-[250] bg-slate-900/95 flex items-center justify-center p-4 backdrop-blur-sm" @click.self="showCCModal = false">
+            <div class="bg-white dark:bg-slate-800 w-full max-w-xl rounded-[2rem] p-8 shadow-2xl relative border border-slate-200 dark:border-slate-700">
+                <button @click="showCCModal = false" class="absolute top-6 right-6 w-10 h-10 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-white rounded-full flex items-center justify-center transition"><i class="fas fa-times text-lg"></i></button>
+                <div class="flex items-center gap-6 mb-8 border-b border-slate-100 dark:border-slate-700 pb-6 pr-10">
+                    <img src="images/cc-by-nc-nd.png" alt="CC BY-NC-ND" class="h-10">
+                    <h2 class="text-xl font-black text-slate-800 dark:text-white uppercase leading-tight">Creative Commons<br><span class="text-sm text-slate-500">BY-NC-ND</span></h2>
+                </div>
+                <p class="text-sm text-slate-800 dark:text-slate-200 font-black uppercase tracking-wide mb-6">Les obligations liées à la licence sont de :</p>
+                <ul class="space-y-4 text-sm text-slate-600 dark:text-slate-300">
+                    <li class="flex items-start gap-3"><i class="fas fa-user-check text-blue-500 mt-1 shrink-0"></i><span><strong>créditer les créateurs</strong> de la paternité des œuvres originales...</span></li>
+                    <li class="flex items-start gap-3"><i class="fas fa-ban text-rose-500 mt-1 shrink-0"></i><span><strong>n’effectuer aucune diffusion partielle</strong>, modification, adaptation...</span></li>
+                    <li class="flex items-start gap-3"><i class="fas fa-hand-holding-usd text-amber-500 mt-1 shrink-0"></i><span><strong>ne pas tirer profit</strong> (gain direct ou plus-value commerciale)...</span></li>
+                </ul>
+            </div>
+        </div>
+    </transition>
+    <transition name="fade">
+        <div v-if="showPdfModal" class="fixed inset-0 z-[100] bg-slate-900/95 flex items-center justify-center p-4 backdrop-blur-sm" @click.self="showPdfModal = false">
+            <div class="bg-white w-full max-w-6xl h-[90vh] rounded-[3rem] overflow-hidden relative shadow-2xl flex flex-col">
+                <div class="absolute top-6 right-6 z-20 flex gap-3">
+                    <a :href="pdfUrl" target="_blank" class="w-12 h-12 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-full flex items-center justify-center transition shadow-sm"><i class="fas fa-external-link-alt text-lg"></i></a>
+                    <button @click="showPdfModal = false" class="w-12 h-12 bg-black/10 hover:bg-black/20 text-slate-800 rounded-full flex items-center justify-center transition"><i class="fas fa-times text-xl"></i></button>
+                </div>
+                <iframe :src="pdfUrl" class="w-full h-full flex-1" frameborder="0"></iframe>
+            </div>
+        </div>
+    </transition>
+
+    <transition name="fade">
+        <div v-if="modalMedia" class="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-0 md:p-6 backdrop-blur-md" @click="closeModal">
+            <div class="absolute top-4 left-1/2 -translate-x-1/2 flex gap-4 z-50 bg-slate-800/80 rounded-full px-4 py-2 border border-slate-700 no-print" @click.stop>
+                <button @click="adjustZoom(-0.2)" class="text-white hover:text-blue-400"><i class="fas fa-search-minus"></i></button>
+                <span class="text-xs font-mono text-slate-300 min-w-[3ch] text-center">{{ Math.round(zoomLevel * 100) }}%</span>
+                <button @click="adjustZoom(0.2)" class="text-white hover:text-blue-400"><i class="fas fa-search-plus"></i></button>
+                <button @click="resetZoom" class="text-white hover:text-red-400 ml-2 border-l border-slate-600 pl-3"><i class="fas fa-compress"></i></button>
+            </div>
+            <div class="relative w-full h-full md:max-w-6xl md:h-[90vh] bg-black md:rounded-[3rem] overflow-hidden flex items-center justify-center border-0 md:border-4 border-white/10" @wheel.prevent="handleWheel" @click.stop>
+                <button @click="closeModal" class="absolute top-4 right-4 text-white text-3xl hover:text-rose-400 transition z-50 bg-black/20 w-12 h-12 rounded-full flex items-center justify-center no-print">&times;</button>
+                <div class="w-full h-full overflow-hidden flex items-center justify-center cursor-move" @mousedown="startDrag" @mousemove="onDrag" @mouseup="stopDrag" @mouseleave="stopDrag" @touchstart="startPinch" @touchmove="onPinch" @touchend="stopDrag">
+                    <img :src="getCurrentModalImage()" @error="handleImgError" :style="{ transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel})`, transition: isDragging ? 'none' : 'transform 0.2s ease-out' }" class="max-w-full max-h-full object-contain select-none pointer-events-none">
+                </div>
+                <div v-if="modalInfo" class="absolute bottom-6 left-6 right-6 z-50 pointer-events-none flex justify-center no-print">
+                    <div class="bg-slate-900/90 text-white p-4 rounded-2xl backdrop-blur-md border border-white/10 max-w-lg pointer-events-auto shadow-2xl">
+                        <h3 class="font-black text-rose-400 uppercase text-sm mb-2 flex items-center gap-2"><i class="fas fa-exclamation-triangle"></i> {{ modalInfo.titre }}</h3>
+                        <p class="text-xs mb-2 text-slate-300"><strong class="text-white uppercase text-[10px] tracking-wider bg-rose-500/20 px-1 rounded text-rose-300 mr-1">Problème</strong> {{ modalInfo.indicateur }}</p>
+                        <p class="text-xs text-slate-300"><strong class="text-white uppercase text-[10px] tracking-wider bg-emerald-500/20 px-1 rounded text-emerald-300 mr-1">Correction</strong> {{ modalInfo.correction }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </transition>
+
+</div>
+
+<script>
+const { createApp } = Vue;
+
+createApp({
+    data() {
+        return {
+            showFullText: false,
+            isSidebarOpen: true,
+            view: 'home',
+            isDarkMode: false,
+            showCCModal: false,
+            searchQuery: '',
+            showMobileSearch: false,
+            curr: null,
+            selectedAgre: null,
+            selectedAction: null,
+            selectedWarmup: null,
+            selectedUnit: null,
+            selectedSession: null,
+            circuit: JSON.parse(localStorage.getItem('gym_circuit') || '[]'),
+            
+            // --- MODE ENFANT ---
+            enfantAnimal: null,
+            animauxEnfant: [
+                { id: 'lapin', nom: 'Lapin', emoji: '🐰', desc: 'Je saute', color: '#22c55e' },
+                { id: 'ours', nom: 'Ours', emoji: '🐻', desc: 'Je roule', color: '#eab308' },
+                { id: 'singe', nom: 'Singe', emoji: '🐒', desc: 'Je me suspends', color: '#f97316' },
+                { id: 'flamant', nom: 'Flamant', emoji: '🦩', desc: 'Je m\'équilibre', color: '#ec4899' },
+                { id: 'chat', nom: 'Chat', emoji: '🐈', desc: 'Je me déplace', color: '#3b82f6' },
+                { id: 'hibou', nom: 'Hibou', emoji: '🦉', desc: 'Je me renverse', color: '#8b5cf6' }
+            ],
+            
+            // --- NOUVEAU : Réussites Enfant ---
+            reussitesEnfant: JSON.parse(localStorage.getItem('gym_reussites_enfant') || '[]'),
+
+            showPdfModal: false,
+            pdfUrl: '',
+            modalMedia: null,
+            modalInfo: null, 
+            modalView: 'face',
+            modalTimer: null,
+            zoomLevel: 1, panX: 0, panY: 0, isDragging: false, dragStartX: 0, dragStartY: 0, lastTouchDist: 0,
+            touchStartX: 0, touchStartY: 0, touchEndX: 0, touchEndY: 0, openFolders: [], globalView: 'face', globalTimer: null, // MODIFICATION : Ajout de touchStartY et touchEndY
+            
+            warmups: typeof warmupsData !== 'undefined' ? warmupsData : [],
+            actionsData: typeof actionsData !== 'undefined' ? actionsData : [],
+            units: typeof unitsList !== 'undefined' ? unitsList : [],
+            situationsDB: typeof situationsDB !== 'undefined' ? situationsDB : [],
+            brevetData: typeof brevetData !== 'undefined' ? brevetData : [],
+            
+            docs77: [
+                { nom: "Cycle 1 - UA 1", file: "DSDEN 77- EPS - GYM - Cycle 1 - UNITE D APPRENTISSAGE 1.pdf" },
+                { nom: "Cycle 1 - UA 2", file: "DSDEN 77- EPS - GYM - Cycle 1 - UNITE D APPRENTISSAGE 2.pdf" },
+                { nom: "Cycle 1 - UA 3", file: "DSDEN 77- EPS - GYM - Cycle 1 - UNITE D APPRENTISSAGE 3.pdf" },
+                { nom: "Cycle 2 - UA 1", file: "DSDEN 77- EPS - GYM - Cycle 2 - UNITE D APPRENTISSAGE 1.pdf" },
+                { nom: "Cycle 2 - UA 2", file: "DSDEN 77- EPS - GYM - Cycle 2 - UNITE D APPRENTISSAGE 2.pdf" },
+                { nom: "Cycle 3 - UA 3", file: "DSDEN 77- EPS - GYM - Cycle 3 - UNITE D APPRENTISSAGE 3.pdf" },
+                { nom: "Présentation Gym Sol", file: "DSDEN 77- EPS - GYM - Gymnastisue au sol presentation.pdf" }
+            ],
+            docs93: [
+                { nom: "Carnet Élève", file: "DSDEN 93- EPS - GYM - Carnet de Progression Maternell Gym - Eleve.pdf" },
+                { nom: "Carnet Enseignant", file: "DSDEN 93- EPS - GYM - Carnet de Progression Maternell Gym - Enseignant.pdf" },
+                { nom: "Fiche Barres", file: "DSDEN 93- EPS - GYM - FICHE ACTION - BARRES.pdf" },
+                { nom: "Fiche Poutre", file: "DSDEN 93- EPS - GYM - FICHE ACTION - POUTRE - S EQUILIBRER.pdf" },
+                { nom: "Fiche Sol - Franchir", file: "DSDEN 93- EPS - GYM - FICHE ACTION - SOL - FRANCHIR.pdf" },
+                { nom: "Fiche Sol - Rouler AR", file: "DSDEN 93- EPS - GYM - FICHE ACTION - SOL - ROULER EN ARRIERE.pdf" },
+                { nom: "Fiche Sol - Rouler AV", file: "DSDEN 93- EPS - GYM - FICHE ACTION - SOL - ROULER EN AVANT.pdf" },
+                { nom: "Fiche Sol - Sauter", file: "DSDEN 93- EPS - GYM - FICHE ACTION - SOL - SAUTER.pdf" }
+            ]
+        }
+    },
+    computed: {
+        pageTitle() {
+            if (this.view === 'circuit') return "MON CIRCUIT";
+            if (this.view === 'session_detail' && this.selectedSession) { return this.selectedSession.id === 'INFO' ? 'Détail Situation' : `SÉANCE ${this.selectedSession.id}`; }
+            if (this.view === 'unit_sessions' && this.selectedUnit) return this.selectedUnit.titre;
+            if (this.view === 'units_list') return "LES UNITÉS";
+            if (this.view === 'all_situations') return "SITUATIONS";
+            if (this.view === 'warmup') return "ÉCHAUFFEMENTS";
+            if (this.view === 'warmup_detail') return this.selectedWarmup?.nom;
+            if (this.view === 'brevet_list') return "BREVET DU PETIT GYMNASTE";
+            if (this.view === 'pedagogy_menu') return "OUTILS PÉDAGOGIQUES";
+            if (this.curr) return this.curr.nom;
+            if (this.selectedAction) return this.selectedAction;
+            if (this.selectedAgre) return this.selectedAgre;
+            return "ESPACE GYMNASTIQUE";
+        },
+        circuitElements() {
+            if (typeof gymData === 'undefined') return [];
+            return this.circuit.map(id => gymData.find(el => el.id === id)).filter(Boolean);
+        },
+        currentContextList() {
+            if (!this.curr) return [];
+            if (this.view.startsWith('enfant_')) return this.currentEnfantList;
+            if (this.curr.id.startsWith('brevet_')) { return this.getBrevetElements(this.selectedAgre, this.selectedAction); } 
+            else { return this.getElements(this.selectedAgre, this.selectedAction); }
+        },
+        currentElementIndex() {
+            if (!this.curr) return -1;
+            return this.currentContextList.findIndex(el => el.id === this.curr.id);
+        },
+        hasPrevElement() { return this.currentElementIndex > 0; },
+        hasNextElement() { return this.currentElementIndex >= 0 && this.currentElementIndex < this.currentContextList.length - 1; },
+        currentEnfantList() {
+            if (!this.enfantAnimal) return [];
+            let list = typeof gymData !== 'undefined' ? gymData.filter(el => el.mode_enfant === this.enfantAnimal.id) : [];
+            if(typeof brevetData !== 'undefined') { list = list.concat(brevetData.filter(el => el.mode_enfant === this.enfantAnimal.id)); }
+            return list;
+        },
+        // NOUVEAU : Récupère les données pour la page récap
+        recapReussitesEnfant() {
+            if (typeof gymData === 'undefined') return [];
+            return gymData.filter(el => this.reussitesEnfant.includes(el.id));
+        },
+        groupedSituations() {
+            const groups = {};
+            this.situationsDB.forEach(sit => {
+                if (!groups[sit.ua]) groups[sit.ua] = [];
+                groups[sit.ua].push(sit);
+            });
+            return groups;
+        },
+        searchResults() {
+            if (this.searchQuery.length < 2) return [];
+            const q = this.searchQuery.toLowerCase();
+            let res = [];
+            if(typeof gymData !== 'undefined') {
+                gymData.forEach(el => {
+                    if(el.nom.toLowerCase().includes(q) || el.action.toLowerCase().includes(q) || el.agre.toLowerCase().includes(q)) {
+                        res.push({ title: el.nom, type: `Élément (${el.agre} - ${el.action})`, data: el, action: 'element', img: el.media.face });
+                    }
+                });
+            }
+            if(typeof brevetData !== 'undefined') {
+                brevetData.forEach(el => {
+                    if(el.nom.toLowerCase().includes(q)) res.push({ title: el.nom, type: 'Brevet', data: el, action: 'element', img: el.media.face });
+                });
+            }
+            this.situationsDB.forEach(s => {
+                if(s.nom.toLowerCase().includes(q) || s.ref.toLowerCase().includes(q)) res.push({ title: s.nom, type: 'Situation', data: s, action: 'situation', img: s.img_dispo });
+            });
+            this.units.forEach(u => {
+                if(u.titre.toLowerCase().includes(q)) res.push({ title: u.titre, type: 'Unité', data: u, action: 'unit', img: u.img });
+            });
+            return res.slice(0, 10);
+        },
+        breadcrumbs() {
+            const crumbs = [];
+            if(this.view === 'home' || this.view.startsWith('enfant_')) return [];
+            if(this.view === 'element' || this.view === 'elements_list' || this.view === 'actions') {
+                if(this.selectedAgre) crumbs.push({ text: this.selectedAgre, action: () => { this.selectAgre(this.selectedAgre); } });
+                if(this.selectedAction && this.view !== 'actions') crumbs.push({ text: this.selectedAction, action: () => { this.selectAction(this.selectedAction); } });
+            }
+            else if(this.view === 'unit_sessions' || this.view === 'session_detail') {
+                crumbs.push({ text: 'Outils Pédago.', action: this.openPedagogyMenu });
+                crumbs.push({ text: 'Unités', action: this.openUnitsList });
+                if(this.selectedUnit) crumbs.push({ text: this.selectedUnit.titre.substring(0, 15)+'...', action: () => { this.selectUnit(this.selectedUnit); } });
+            }
+            else if(this.view === 'units_list' || this.view === 'brevet_list') { crumbs.push({ text: 'Outils Pédago.', action: this.openPedagogyMenu }); }
+            else if(this.view === 'warmup_detail') { crumbs.push({ text: 'Échauffements', action: this.openWarmupList }); }
+            return crumbs;
+        }
+    },
+    methods: {
+        goHome() { this.view = 'home'; this.resetSelection(); this.closeModal(); this.searchQuery = ''; },
+        resetSelection() { this.curr = null; this.selectedAgre = null; this.selectedAction = null; this.selectedWarmup = null; this.selectedUnit = null; this.selectedSession = null; },
+        handleBack() {
+            if (this.view === 'enfant_element') { this.view = 'enfant_liste'; }
+            else if (this.view === 'enfant_liste') { this.view = 'enfant_home'; }
+            else if (this.view === 'enfant_recap') { this.view = 'enfant_home'; }
+            else if (this.view === 'session_detail') { if(this.selectedSession.id === 'INFO') this.view = 'all_situations'; else this.view = 'unit_sessions'; }
+            else if (this.view === 'unit_sessions' || this.view === 'all_situations') this.view = 'units_list';
+            else if (this.view === 'units_list' || this.view === 'brevet_list') this.view = 'pedagogy_menu';
+            else if (this.view === 'pedagogy_menu' || this.view === 'warmup' || this.view === 'circuit' || this.view === 'actions') this.goHome();
+            else if (this.view === 'warmup_detail') this.view = 'warmup';
+            else if (this.view === 'element') {
+                if(this.curr && this.curr.id.startsWith('brevet_')) { this.view = 'brevet_list'; } 
+                else { this.selectedAction ? this.view = 'elements_list' : this.goHome(); }
+            }
+            else if (this.view === 'elements_list') this.view = 'actions';
+            else this.goHome();
+            this.scrollToTop();
+        },
+
+        openModeEnfant() { this.view = 'enfant_home'; this.isSidebarOpen = false; },
+        selectEnfantAnimal(animal) { this.enfantAnimal = animal; this.view = 'enfant_liste'; this.scrollToTop(); },
+        selectEnfantElement(el) { this.curr = el; this.view = 'enfant_element'; this.scrollToTop(); },
+
+        toggleReussiteEnfant(id) {
+            const index = this.reussitesEnfant.indexOf(id);
+            if (index > -1) {
+                this.reussitesEnfant.splice(index, 1);
+            } else {
+                this.reussitesEnfant.push(id);
+                this.triggerConfetti();
+            }
+            localStorage.setItem('gym_reussites_enfant', JSON.stringify(this.reussitesEnfant));
+        },
+        triggerConfetti() {
+            if(typeof confetti !== 'undefined') {
+                confetti({
+                    particleCount: 150,
+                    spread: 100,
+                    origin: { y: 0.6 },
+                    colors: ['#ef4444', '#3b82f6', '#eab308', '#22c55e'],
+                    disableForReducedMotion: true
+                });
+                setTimeout(() => {
+                    confetti({ particleCount: 50, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#ef4444', '#eab308'] });
+                    confetti({ particleCount: 50, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#3b82f6', '#22c55e'] });
+                }, 250);
+            }
+        },
+        getAnimalEmoji(animalId) {
+            const animal = this.animauxEnfant.find(a => a.id === animalId);
+            return animal ? animal.emoji : '❓';
+        },
+
+        toggleCircuit(id) {
+            const index = this.circuit.indexOf(id);
+            if (index === -1) {
+                if (this.circuit.length >= 6) { alert("Afin de garder une fiche lisible à l'impression, le circuit est limité à 6 ateliers."); return; }
+                this.circuit.push(id);
+            } else { this.circuit.splice(index, 1); }
+            localStorage.setItem('gym_circuit', JSON.stringify(this.circuit));
+        },
+        isInCircuit(id) { return this.circuit.includes(id); },
+        clearCircuit() { if(confirm("Voulez-vous vraiment vider tout le circuit ?")) { this.circuit = []; localStorage.setItem('gym_circuit', '[]'); } },
+
+        speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'fr-FR'; utterance.rate = 0.9;
+                window.speechSynthesis.speak(utterance);
+            } else { alert("La lecture audio n'est pas supportée par votre navigateur."); }
+        },
+        speakElement(el) {
+            let textToRead = `Élément : ${el.nom}. `;
+            if(el.criteres_realisation && el.criteres_realisation.length) { textToRead += `Pour réussir, je dois faire attention à : ${el.criteres_realisation.join('. ')}. `; }
+            if(el.criteres_reussite && el.criteres_reussite.length) { textToRead += `J'ai réussi si : ${el.criteres_reussite.join('. ')}.`; }
+            this.speak(textToRead);
+        },
+
+        getActions(agre) { return typeof gymData !== 'undefined' ? [...new Set(gymData.filter(d => d.agre === agre).map(d => d.action))] : []; },
+        getElements(a, ac) { return typeof gymData !== 'undefined' ? gymData.filter(d => d.agre === a && d.action === ac) : []; },
+        getSessions(unitId) { return typeof sessionsMap !== 'undefined' ? sessionsMap.filter(s => s.ua === unitId) : []; },
+        getUnitTitle(uaId) { const u = this.units.find(x => x.id === uaId); return u ? u.titre : uaId; },
+        
+        getDifficultyClass(level) {
+            let count = 0;
+            if (typeof level === 'string' && level.includes('⭐')) { count = level.split('⭐').length - 1; } 
+            else if (typeof level === 'number' || !isNaN(level)) { count = parseInt(level); }
+            if (count === 0 && typeof level === 'string') {
+                if(level.includes('1')) count = 1; else if(level.includes('2')) count = 2; else if(level.includes('3')) count = 3; else if(level.includes('4')) count = 4;
+            }
+            return `diff-${Math.min(Math.max(count, 1), 4)}`;
+        },
+
+        getSituationData(unitId, partString) {
+            if(!partString) return null;
+            const parts = partString.split(' - ');
+            const sitRef = parts[0].trim();
+            const evoRef = parts.length > 1 ? parts[1].trim() : null;
+            const baseData = this.situationsDB.find(s => s.ua === unitId && s.ref === sitRef);
+            if (!baseData) return null;
+            let evoText = null;
+            if (evoRef) {
+                if(evoRef === 'EVOLUTION 1') evoText = baseData.evo1;
+                else if(evoRef === 'EVOLUTION 2') evoText = baseData.evo2;
+                else if(evoRef === 'EVOLUTION 3') evoText = baseData.evo3;
+                else evoText = evoRef;
+            }
+            return { data: baseData, evoText: evoText };
+        },
+
+        getBrevetActions(agre) { return typeof brevetData === 'undefined' ? [] : [...new Set(brevetData.filter(b => b.agre === agre).map(b => b.action))].sort(); },
+        getBrevetElements(agre, action) { return typeof brevetData === 'undefined' ? [] : brevetData.filter(b => b.agre === agre && b.action === action); },
+
+        toggleFolder(k) { const i = this.openFolders.indexOf(k); i > -1 ? this.openFolders.splice(i, 1) : this.openFolders.push(k); },
+        selectAgre(agre) { this.selectedAgre = agre; this.view = 'actions'; },
+        selectAction(action) { this.selectedAction = action; this.view = 'elements_list'; },
+        selectElement(el) {
+            this.curr = el; this.selectedAgre = el.agre; this.selectedAction = el.action;
+            this.view = 'element'; this.globalView = 'face';
+            if(this.globalTimer) clearInterval(this.globalTimer);
+            if(el.media && el.media.face && el.media.profil) {
+                this.globalTimer = setInterval(() => { this.globalView = (this.globalView === 'face' ? 'profil' : 'face'); }, 4000);
+            }
+            if(window.innerWidth < 1024) this.isSidebarOpen = false;
+            this.scrollToTop();
+        },
+        goToPrevElement() { if (this.hasPrevElement) { this.selectElement(this.currentContextList[this.currentElementIndex - 1]); } },
+        goToNextElement() { if (this.hasNextElement) { this.selectElement(this.currentContextList[this.currentElementIndex + 1]); } },
+        openWarmupList() { this.view = 'warmup'; this.selectedWarmup = null; if(window.innerWidth < 1024) this.isSidebarOpen = false; },
+        openWarmupDetail(w) { this.selectedWarmup = w; this.view = 'warmup_detail'; },
+        openUnitsList() { this.view = 'units_list'; this.selectedUnit = null; if(window.innerWidth < 1024) this.isSidebarOpen = false; },
+        openBrevetList() { this.view = 'brevet_list'; if(window.innerWidth < 1024) this.isSidebarOpen = false; },
+        openPedagogyMenu() { this.view = 'pedagogy_menu'; if(window.innerWidth < 1024) this.isSidebarOpen = false; },
+        selectUnit(unit) { 
+            if(unit.id === 'SITUATIONS_ALL') { this.view = 'all_situations'; } 
+            else { this.selectedUnit = unit; this.view = 'unit_sessions'; }
+        },
+        selectSession(session) { this.selectedSession = session; this.view = 'session_detail'; this.scrollToTop(); },
+        openSituationDetail(sit) {
+            this.selectedUnit = this.units.find(u => u.id === sit.ua);
+            this.selectedSession = { id: 'INFO', parts: [sit.ref] };
+            this.view = 'session_detail';
+            this.scrollToTop();
+        },
+        scrollToTop() { this.$nextTick(() => { if(this.$refs.mainScroll) this.$refs.mainScroll.scrollTop = 0; }); },
+        
+        openDoc(folder, filename) { this.pdfUrl = folder ? ('docs/' + folder + '/' + filename) : ('docs/' + filename); this.showPdfModal = true; },
+        openDocText(filename) { this.pdfUrl = 'docs/' + filename; this.showPdfModal = true; },
+        openWarmupPdf() { if(this.selectedWarmup) { this.pdfUrl = 'docs/' + this.selectedWarmup.pdf; this.showPdfModal = true; } },
+
+        toggleDarkMode() {
+            this.isDarkMode = !this.isDarkMode;
+            if (this.isDarkMode) document.documentElement.classList.add('dark');
+            else document.documentElement.classList.remove('dark');
+            localStorage.setItem('gym_theme', this.isDarkMode ? 'dark' : 'light');
+        },
+        toggleMobileSearch() { this.showMobileSearch = !this.showMobileSearch; },
+        handleSearchResult(res) {
+            this.searchQuery = ''; this.showMobileSearch = false;
+            if(res.action === 'element') this.selectElement(res.data);
+            if(res.action === 'situation') this.openSituationDetail(res.data);
+            if(res.action === 'unit') this.selectUnit(res.data);
+        },
+        handleImgError(e) {
+            e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f1f5f9'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='12' fill='%2394a3b8' text-anchor='middle' dy='.3em'%3EImage non dispo%3C/text%3E%3C/svg%3E";
+            e.target.classList.add('opacity-50');
+        },
+        currentFile(item, view) {
+            if (!item?.media) return '';
+            const m = item.media;
+            return (view === 'face' && m.face) ? m.face : (m.profil || m.face);
+        },
+
+        // MODIFICATION : Amélioration de la gestion du Swipe
+        handleTouchStart(e) { 
+            this.touchStartX = e.changedTouches[0].screenX; 
+            this.touchStartY = e.changedTouches[0].screenY; // On enregistre aussi l'axe Y
+        },
+        handleTouchEnd(e) { 
+            this.touchEndX = e.changedTouches[0].screenX; 
+            this.touchEndY = e.changedTouches[0].screenY; // On enregistre aussi l'axe Y
+            this.handleSwipe(); 
+        },
+        handleSwipe() {
+            const SWIPE_THRESHOLD = 50;
+            const diffX = this.touchStartX - this.touchEndX;
+            const diffY = this.touchStartY - this.touchEndY;
+            
+            // Condition : On ne déclenche le swipe QUE si le mouvement est plus horizontal que vertical
+            // (Cela évite les changements de page accidentels lors d'un défilement vers le bas)
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                
+                if (this.view === 'session_detail' && this.selectedSession && this.selectedSession.id !== 'INFO' && this.selectedUnit) {
+                    const sessions = this.getSessions(this.selectedUnit.id);
+                    const currentIndex = sessions.findIndex(s => s.id === this.selectedSession.id);
+                    if (Math.abs(diffX) > SWIPE_THRESHOLD) {
+                        if (diffX > 0 && currentIndex < sessions.length - 1) this.selectSession(sessions[currentIndex + 1]);
+                        else if (diffX < 0 && currentIndex > 0) this.selectSession(sessions[currentIndex - 1]);
+                    }
+                }
+                else if (this.view === 'element' && this.curr) {
+                    if (Math.abs(diffX) > SWIPE_THRESHOLD) {
+                        if (diffX > 0 && this.hasNextElement) this.goToNextElement();
+                        else if (diffX < 0 && this.hasPrevElement) this.goToPrevElement();
+                    }
+                }
+                else if (this.view === 'enfant_element' && this.curr) {
+                    if (Math.abs(diffX) > SWIPE_THRESHOLD) {
+                        if (diffX > 0 && this.hasNextElement) this.selectEnfantElement(this.currentContextList[this.currentElementIndex + 1]);
+                        else if (diffX < 0 && this.hasPrevElement) this.selectEnfantElement(this.currentContextList[this.currentElementIndex - 1]);
+                    }
+                }
+            }
+        },
+
+        openModal(media, info = null) {
+            if(!media) return;
+            this.modalMedia = media; this.modalInfo = info; this.modalView = 'face'; this.resetZoom();
+            if(this.modalTimer) clearInterval(this.modalTimer);
+            if(typeof media === 'object' && media.face && media.profil) {
+                this.modalTimer = setInterval(() => { this.modalView = (this.modalView === 'face' ? 'profil' : 'face'); }, 4000);
+            }
+        },
+        closeModal() { this.modalMedia = null; this.modalInfo = null; if(this.modalTimer) clearInterval(this.modalTimer); },
+        getCurrentModalImage() {
+            if (!this.modalMedia) return '';
+            if (typeof this.modalMedia === 'string') return this.modalMedia;
+            if (this.modalView === 'face' && this.modalMedia.face) return 'images/' + this.modalMedia.face;
+            if (this.modalView === 'profil' && this.modalMedia.profil) return 'images/' + this.modalMedia.profil;
+            return 'images/' + (this.modalMedia.face || this.modalMedia.profil || '');
+        },
+        
+        adjustZoom(delta) { this.zoomLevel = Math.max(1, Math.min(4, this.zoomLevel + delta)); if(this.zoomLevel === 1) { this.panX = 0; this.panY = 0; } },
+        resetZoom() { this.zoomLevel = 1; this.panX = 0; this.panY = 0; },
+        handleWheel(e) { const delta = e.deltaY > 0 ? -0.1 : 0.1; this.adjustZoom(delta); },
+        startDrag(e) { if(this.zoomLevel > 1) { this.isDragging = true; this.dragStartX = e.clientX - this.panX; this.dragStartY = e.clientY - this.panY; } },
+        onDrag(e) { if(this.isDragging) { this.panX = e.clientX - this.dragStartX; this.panY = e.clientY - this.dragStartY; } },
+        stopDrag() { this.isDragging = false; },
+
+        startPinch(e) {
+            if (e.touches.length === 2) {
+                this.lastTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            } else if (e.touches.length === 1 && this.zoomLevel > 1) {
+                 this.isDragging = true; this.dragStartX = e.touches[0].clientX - this.panX; this.dragStartY = e.touches[0].clientY - this.panY;
+            }
+        },
+        onPinch(e) {
+            if (e.touches.length === 2) {
+                const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                const delta = dist - this.lastTouchDist;
+                this.zoomLevel = Math.max(1, Math.min(4, this.zoomLevel + delta * 0.01));
+                this.lastTouchDist = dist;
+            } else if(this.isDragging && e.touches.length === 1) {
+                this.panX = e.touches[0].clientX - this.dragStartX; this.panY = e.touches[0].clientY - this.dragStartY;
+            }
+        }
+    },
+    mounted() {
+        if(window.innerWidth < 1024) this.isSidebarOpen = false;
+        if(localStorage.getItem('gym_theme') === 'dark') {
+            this.isDarkMode = true;
+            document.documentElement.classList.add('dark');
+        }
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
+            });
+        }
+    }
+}).mount('#app');
+</script>
+</body>
+</html>

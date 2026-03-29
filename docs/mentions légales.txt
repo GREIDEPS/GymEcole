@@ -1,0 +1,68 @@
+
+
+		MENTIONS LÉGALES ET DÉCLARATION D’ACCESSIBILITÉ
+
+	1. Présentation de l'application
+
+	L’application Gymnastique à l'École est une ressource pédagogique numérique
+destinée aux professeurs des écoles, aux enseignants d'Éducation Physique et Sportive
+(EPS) et à leurs élèves. Elle propose des démonstrations visuelles (Sol, Poutre, Barres),
+des fiches d'échauffement et des progressions pédagogiques issues des unités
+d'apprentissage de la DSDEN 77 et du "Brevet du petit gymnaste" de la DSDEN 93.
+
+	2. Éditeur et Hébergement
+
+• Éditeur : GREID EPS - greideps@ac-creteil.fr
+
+• Directeur de publication : Inspection Pédagogique - EPS Créteil
+
+• Hébergement : GitHub Pages
+
+	3. Protection des données personnelles (RGPD)
+
+Conformément au RGPD, l'application est conçue pour être utilisée sans création
+de compte.
+
+• Collecte : Aucune donnée personnelle nominative n'est collectée à votre insu.
+
+• LocalStorage : Le navigateur utilise le stockage local exclusivement pou
+mémoriser vos préférences (ex: mode sombre).
+
+• Statistiques : Les adresses IP peuvent être conservées par l'hébergeur pour une
+durée maximale de 12 mois à des fins de sécurité et de statistiques anonymes.
+
+• Droits : Pour exercer vos droits d’accès ou de rectification, contactez : dpd@ac-creteil.fr
+
+4. Propriété intellectuelle et Droits d'auteur
+
+• Sources : Les ressources pédagogiques sont issues des DSDEN 77 et 93.
+
+• Usage : Le contenu est destiné à un usage strictement pédagogique, personnel ou
+professionnel en milieu scolaire.
+
+• Interdictions : Toute utilisation commerciale ou publicitaire est strictement interdite.
+La reproduction des vidéos et graphismes nécessite l'accord préalable des auteurs.
+
+5. Déclaration d'accessibilité (RGAA 4.1)
+
+L'éditeur s'engage à rendre ses services numériques accessibles conformément à
+l'article 47 de la loi n° 2005-102 du 11 février 2005.
+
+• État de conformité : L'application est partiellement conforme au référentiel
+général d’amélioration de l’accessibilité.
+
+• Points forts : Structure sémantique respectée (header, nav, main), navigation
+intégrale au clavier, fenêtres modales refermables via "Echap", et contrastes
+ajustables via le mode sombre.
+
+• Limites : Certaines vidéos ne possèdent pas encore d'audiodescription ou de
+transcription textuelle complète. Certains documents PDF tiers peuvent présenter
+des défauts de balisage pour les lecteurs d'écran.
+
+6. Contact et Recours
+
+Si vous constatez un défaut d'accessibilité, contactez-nous à : greideps@ac-creteil.fr. Si
+aucune réponse satisfaisante n'est obtenue, vous pouvez saisir le Défenseur des droits
+(https://formulaire.defenseurdesdroits.fr/).
+
+Dernière mise à jour : 14/03/2026.
