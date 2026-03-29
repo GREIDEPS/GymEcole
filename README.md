@@ -19,6 +19,6 @@
 * **Technologie :** Développé avec Vue.js 3 et Tailwind CSS.
 * **Mode Hors-ligne :** En tant que Progressive Web App (PWA), l'application peut être installée sur tablette/smartphone et fonctionne sans connexion internet dans les gymnases.
 * **Confidentialité :** Aucune donnée personnelle n'est collectée (stockage local sur l'appareil uniquement).
-
 ---
+
 *Application gratuite à visée pédagogique.*
